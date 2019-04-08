@@ -30,6 +30,7 @@
     <name>Examples of various use cases</name>
     
     <modules>
+        <module>simple</module>
         <module>custom-resolver</module>
         <module>security-lockdown</module>
         <module>caching</module>
