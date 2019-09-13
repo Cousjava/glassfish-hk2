@@ -93,6 +93,7 @@
                          <configuration>
                              <excludes>
                                  <exclude>**/negative/*</exclude>
+                                 <exclude>gendir-tests.jar</exclude>
                              </excludes>
                              <finalName>gendir</finalName>
                              <outputDirectory>${project.build.testOutputDirectory}</outputDirectory>
