@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012, 2018 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021 Payara Services Ltd.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -20,7 +21,6 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -289,9 +289,9 @@ public class ClazzCreator<T> implements Creator<T> {
                 constructorInterceptors,
                 new ConstructorActionImpl<T>(this, methodInterceptors));
     }
-
-    private void fieldMe(Map<SystemInjecteeImpl, Object> resolved, T t) throws Throwable {
-        for (ResolutionInfo ri : myFields) {
+    
+    private void fieldResolution(Map<SystemInjecteeImpl, Object> resolved, T t, Set<ResolutionInfo> fields) throws Throwable {
+        for (ResolutionInfo ri : fields) {
             Field field = (Field) ri.baseElement;
             List<SystemInjecteeImpl> injectees = ri.injectees;  // Should be only one injectee, itself!
 
@@ -306,38 +306,8 @@ public class ClazzCreator<T> implements Creator<T> {
         }
     }
     
-    private void fieldParents(Map<SystemInjecteeImpl, Object> resolved, T t) throws Throwable {
-        for (ResolutionInfo ri : superFields) {
-            Field field = (Field) ri.baseElement;
-            List<SystemInjecteeImpl> injectees = ri.injectees;  // Should be only one injectee, itself!
-
-            Injectee fieldInjectee = null;
-            for (Injectee candidate : injectees) {
-                fieldInjectee = candidate;
-            }
-
-            Object putMeIn = resolved.get(fieldInjectee);
-
-            ReflectionHelper.setField(field, t, putMeIn);
-        }
-    }
-
-    private void methodMe(Map<SystemInjecteeImpl, Object> resolved, T t) throws Throwable {
-        for (ResolutionInfo ri : myInitializers) {
-            Method m = (Method) ri.baseElement;
-            List<SystemInjecteeImpl> injectees = ri.injectees;
-
-            Object args[] = new Object[injectees.size()];
-            for (Injectee injectee : injectees) {
-                args[injectee.getPosition()] = resolved.get(injectee);
-            }
-
-            ReflectionHelper.invoke(t, m, args, locator.getNeutralContextClassLoader());
-        }
-    }
-    
-    private void methodParents(Map<SystemInjecteeImpl, Object> resolved, T t) throws Throwable {
-        for (ResolutionInfo ri : superInitializers) {
+    private void methodResolution(Map<SystemInjecteeImpl, Object> resolved, T t, Set<ResolutionInfo> methods) throws Throwable {
+        for (ResolutionInfo ri : methods) {
             Method m = (Method) ri.baseElement;
             List<SystemInjecteeImpl> injectees = ri.injectees;
 
@@ -396,16 +366,16 @@ public class ClazzCreator<T> implements Creator<T> {
             T retVal = (T) createMe(allResolved);
             
             failureLocation="parent field inject";
-            fieldParents(allResolved, retVal);
+            fieldResolution(allResolved, retVal, superFields);
             
             failureLocation = "parent method inject";
-            methodParents(allResolved, retVal);
+            methodResolution(allResolved, retVal, superInitializers);
 
             failureLocation = "field inject";
-            fieldMe(allResolved, retVal);
+            fieldResolution(allResolved, retVal, myFields);
 
             failureLocation = "method inject";
-            methodMe(allResolved, retVal);
+            methodResolution(allResolved, retVal, superFields);
 
             failureLocation = "post construct";
             postConstructMe(retVal);
